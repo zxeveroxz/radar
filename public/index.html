@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <h1>Socket.io NODE.JS</h1>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+    //es2015
+    var socket = io()
+    //enviando un numero random cada dos segundos
+    setInterval(function(){
+      socket.emit('client/random', Math.random())
+    }, 30000)
+    //recibiendo un numero random cada dos segundos
+    socket.on('server/random', function(num){
+      console.log(num)
+    })
+    
+    socket.on('server/start', function(msg){
+      //console.log(msg)
+      document.getElementById("fac").innerHTML = msg;
+    })
+  </script>
+  
+<h2>Se esta procesando la factura</h2>
+<h4 id="fac">....</h4>  
+</body>
+</html>
