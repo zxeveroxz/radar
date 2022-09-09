@@ -5,7 +5,12 @@ const http = require('http');
 var soap = require('soap');
 var fs = require('fs');
 var path = require('path');
-const { Console } = require('console');
+
+const xl = require('excel4node');
+const wb = new xl.Workbook();
+const ws = wb.addWorksheet('Worksheet Name');
+
+
 var resp = null;
 
 let request = null;
@@ -40,11 +45,29 @@ let listar_ruc = async () => {
 
 let lista_xml = async () => {
   let sql = "SELECT CONVERT(UNCOMPRESS(XML) USING utf8) XML FROM tbl2_XML where ruc_=? and tipo = ? and cdr_codigo =  ?  limit 20";
-  let param = ['20125844589', '01','null'];
+  let param = ['20125844589', '01', 'null'];
   const [rows, fields] = await query(sql, param);
   return rows;
 }
 
+let lista_xml_error = async () => {
+  //ID DE EJEMPLO: 948594
+  try {
+    let sql = `SELECT 
+                      ruc_, raz, x.idx, xml_fecha, xml_nombre, cdr_nombre, cdr_codigo , CONVERT(UNCOMPRESS(cdr) USING utf8) cdr
+                  FROM 
+                      tbl2_XML x inner join tbl_user u ON x.ruc_=u.ruc 
+                  where 
+                     cdr_nombre = ? and xml_fecha > (NOW() - INTERVAL 1 MONTH)  and cdr_codigo = ? and xml_fecha_envio is not null 
+                  `;
+    let param = ['', 0];
+    const [rows, fields] = await query(sql, param);
+    return rows;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
+}
 
 function envio_soap() {
   var url = 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl';
@@ -70,6 +93,25 @@ const PORT = process.env.PORT || 400;
 app.use(express.static(path.join(__dirname, 'public')));//middleware de express para archivos estaticos
 
 //router
+app.get('/lista_error', async (req, res) => {
+  let data = await lista_xml_error();
+
+  //Write Data in Excel file
+  let rowIndex = 2;
+  data.forEach(record => {
+    let columnIndex = 1;
+    Object.keys(record).forEach(columnName => {
+      ws.cell(rowIndex, columnIndex++)
+        .string(record[columnName]+' ')
+    });
+    rowIndex++;
+  });
+  wb.write('data2.xlsx');
+
+
+  res.json(data);
+});
+
 app.get('/lista', async (req, res) => {
   res.json(await lista_xml());
 });
