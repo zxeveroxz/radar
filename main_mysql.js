@@ -54,7 +54,7 @@ let lista_xml_error = async () => {
   //ID DE EJEMPLO: 948594
   try {
     let sql = `SELECT 
-                      ruc_, raz, x.idx, xml_fecha, xml_nombre, cdr_nombre, cdr_codigo , CONVERT(UNCOMPRESS(cdr) USING utf8) cdr
+                      ruc_, raz, x.idx,  Date_Format(xml_fecha,'%Y-%m-%d %H:%i:%s') xml_fecha, xml_nombre, cdr_nombre, cdr_codigo , CONVERT(UNCOMPRESS(cdr) USING utf8) cdr
                   FROM 
                       tbl2_XML x inner join tbl_user u ON x.ruc_=u.ruc 
                   where 
@@ -102,11 +102,25 @@ app.get('/lista_error', async (req, res) => {
     let columnIndex = 1;
     Object.keys(record).forEach(columnName => {
       ws.cell(rowIndex, columnIndex++)
-        .string(record[columnName]+' ')
+        .string(record[columnName] + ' ')
     });
     rowIndex++;
   });
-  wb.write('data2.xlsx');
+
+  let documento = "error.xlsx";
+
+  try {
+    if (fs.existsSync(documento)) {
+      fs.unlinkSync(documento)
+      wb.write(documento);
+    }else{
+      wb.write(documento);
+    }
+  } catch (err) {
+    console.error(err)
+  }
+
+  
 
 
   res.json(data);
