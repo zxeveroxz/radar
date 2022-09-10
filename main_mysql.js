@@ -1,4 +1,5 @@
-'use strict'
+//'use strict'
+require('dotenv').config();
 var express = require('express');
 const mysql = require('mysql2/promise');
 const http = require('http');
@@ -10,16 +11,15 @@ const xl = require('excel4node');
 const wb = new xl.Workbook();
 const ws = wb.addWorksheet('Worksheet Name');
 
-
+//console.log(process.env.IP_SERVER);
 var resp = null;
-
 let request = null;
 
 let config = {
-  host: '25.21.196.223',
-  user: 'externo2',
-  password: '@pocalipsiZ20',
-  database: 'BD_FACTURADOR'
+  host: process.env.SERVER,
+  user: process.env.USER,
+  password: process.env.PASSWORD,
+  database: process.env.DATABASE
 };
 
 
@@ -28,10 +28,12 @@ async function query(sql, param = []) {
   return await pool.execute(sql, param);
 }
 
+let EMPRESAS = [];
 (async () => {
   let sql = "SELECT * FROM lista_empresas ";
   let param = [];
   const [rows, fields] = await query(sql, param);
+  EMPRESAS = rows;
   //console.log(rows);
 })();
 
@@ -68,6 +70,26 @@ let lista_xml_error = async () => {
     return error;
   }
 }
+
+let radar = () => {
+  EMPRESAS.forEach(async (item, index) => {
+    let sql = `SELECT count(idx) total 
+                FROM tbl2_XML  
+                WHERE ruc_=? and xml_fecha > (NOW() - INTERVAL 10 day) and tipo in ('01','03','09') and cdr_codigo != '0'
+                HAVING total > 0`;
+    let param = [item.ruc];
+    const [rows, fields] = await query(sql, param);
+    if (rows.length > 0)
+      console.log(item.ruc + "=>" + rows[0].total);
+  });
+}
+
+
+setInterval(async () => {
+  console.log("\nvuelta ...........................\n")
+  await radar()
+
+}, (1000 * 60) * 0.2);
 
 function envio_soap() {
   var url = 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl';
@@ -113,14 +135,14 @@ app.get('/lista_error', async (req, res) => {
     if (fs.existsSync(documento)) {
       fs.unlinkSync(documento)
       wb.write(documento);
-    }else{
+    } else {
       wb.write(documento);
     }
   } catch (err) {
     console.error(err)
   }
 
-  
+
 
 
   res.json(data);
